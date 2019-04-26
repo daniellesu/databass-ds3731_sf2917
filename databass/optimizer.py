@@ -63,8 +63,8 @@ class Optimizer(object):
     #      try out our naive Selinger implementation.  Note that the current
     #      implementation does NOT generate good plans because you need to implement
     #      cost and cardinality estimates first!
-    # opt = SelingerOpt(self.db)
-    # join_tree = opt(preds, sources)
+    opt = SelingerOpt(self.db)
+    join_tree = opt(preds, sources)
 
     fromop.replace(join_tree)
     return op
@@ -276,7 +276,6 @@ class SelingerOpt(object):
     return best_plan
 
 
-
   def cost(self, join):
     """
     @join a left-deep join subplan
@@ -300,7 +299,16 @@ class SelingerOpt(object):
       # of tuples we need to examine from the inner (right) table.
       #
       # Hint: You may want to compute the cost recursively.
-      cost = 0
+    	
+    	self.cost = cost(self, join)
+    	if self.cost is None:
+    		continue
+    	cost = 0	
+    	for i, table in enumerate(join):
+    		outer_len = len(join[:i])
+    		inner_len = len(join[i+1:])
+    		cost = outer_len + outer_len * inner_len
+    		
 
       # We penalize high cardinality joins a little bit
       cost += 0.1 * self.card(join)
