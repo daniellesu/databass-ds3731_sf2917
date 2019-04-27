@@ -14,7 +14,7 @@ except:
 
 
 class Stats(object):
-  
+
   # XXX: Edit this to compute the table cardinality
   def __init__(self, table):
     self.table = table
@@ -22,20 +22,26 @@ class Stats(object):
 
   # XXX: edit this to return the domain of the field
   def __getitem__(self, field):
-  	if type(self, field) == "num":
+    if type(self, field) == "num":
   		self.min = min(field)
   		self.max = max(field)
   		self.ndistinct = len(set(field))
-  	elif type(self, field) == "str":
-  		self.min = None
-  		self.max = None
-  		self.ndistinct = len(set(field))
-  	self.domain = {
-  					"min" == self.min,
-  					"max" == self.max,
-  					"ndistinct" == self.ndistinct
-  					}
-	return self.domain
+    elif type(self, field) == "str":
+      self.min = None
+      self.max = None
+      self.ndistinct = len(set(field))
+
+    # self.domain = {
+    #     					"min" == self.min,
+    #     					"max" == self.max,
+    #     					"ndistinct" == self.ndistinct
+    #     					}
+    self.domain = {
+                  "min": self.min,
+                  "max": self.max,
+                  "ndistinct": self.ndistinct
+                  }
+    return self.domain
 
 
 class Table(object):

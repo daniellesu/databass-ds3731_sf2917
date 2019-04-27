@@ -18,7 +18,7 @@ class Optimizer(object):
   def __call__(self, op):
     if not op: return None
 
-    # If there's a From operator in the tree, 
+    # If there's a From operator in the tree,
     # then replace with join tree
     while op.collectone("From"):
       op = self.expand_from_op(op)
@@ -34,7 +34,7 @@ class Optimizer(object):
        that is an ancestor of F
     2. Keep the equality join predicates that only reference tables in
        the operator F
-    3. Pick a join order 
+    3. Pick a join order
     """
 
     # pick the first From clause to replace with join operators
@@ -42,7 +42,7 @@ class Optimizer(object):
     sources = fromop.cs
     sourcealiases = [s.alias for s in sources]
 
-    # get all equi-join predicates 
+    # get all equi-join predicates
     filters = op.collect("Filter")
     preds = []
     for f in filters:
@@ -57,8 +57,8 @@ class Optimizer(object):
         join_tree = source
       else:
         join_tree = ThetaJoin(join_tree, source, Bool(True))
-    
-    
+
+
     # XXX: Uncomment the following two lines of code and run this file to
     #      try out our naive Selinger implementation.  Note that the current
     #      implementation does NOT generate good plans because you need to implement
@@ -126,7 +126,7 @@ class SelingerOpt(object):
     # This is an exhaustive algorithm that uses recursion
     # You will implement a faster bottom-up algorithm based on Selinger
     plan = self.best_plan_exhaustive(sources)
-    
+
     # XXX: Uncomment the following once you have implemented best_plan()
     # plan = self.best_plan(sources)
 
@@ -140,12 +140,12 @@ class SelingerOpt(object):
     @preds list of join predicates to index
 
     Build index to map a pair of tablenames to their join predicates
-    e.g., 
-    
-      SELECT * FROM A,B WHERE A.a = B.b 
-   
+    e.g.,
+
+      SELECT * FROM A,B WHERE A.a = B.b
+
     creates the lookup table:
-   
+
       A,B --> "A.a = B.b"
       B,A --> "A.a = B.b"
    """
@@ -163,7 +163,7 @@ class SelingerOpt(object):
     @r right Scan operator
 
     This method looks for any predicate that involves a table in the left
-    subplan and right Scan operator.  If it can't find a predicate, then it 
+    subplan and right Scan operator.  If it can't find a predicate, then it
     returns the predicate True
     """
     if l.is_type(Scan):
@@ -181,14 +181,14 @@ class SelingerOpt(object):
     @sources list of tables that we will build a join plan for
 
     This implements a Selinger-based Bottom-up join optimization
-    and returns a left-deep ThetaJoin plan.  The algorithm 
+    and returns a left-deep ThetaJoin plan.  The algorithm
 
     1. picks the best 2-table join plan
     2. then iteratively picks the next table to join based on
-       the cost model that you will implement.  
+       the cost model that you will implement.
 
     """
-    # make a copy of sources 
+    # make a copy of sources
     sources = list(sources)
 
     # No need for optimizer if only one table in the FROM clause
@@ -208,7 +208,7 @@ class SelingerOpt(object):
         self.plans_tested += 1
         pred = self.get_join_pred(best_plan, r)
 
-        
+
         # XXX: Write code to construct a candidate plan with r as the
         # inner table, and compute its cost using self.cost()
         #
@@ -248,9 +248,9 @@ class SelingerOpt(object):
     This is an example implementation of a exhaustive plan optimizer.
     It is slower than the bottom-up Selinnger approach
     that you will implement because it ends up checking the same candidate
-    plans multiple times.  
+    plans multiple times.
 
-    This code is provided to give you hints about how to use the class 
+    This code is provided to give you hints about how to use the class
     methods and implement the bottom-up approach
     """
     if len(sources) == 1: return sources[0]
@@ -293,33 +293,31 @@ class SelingerOpt(object):
       # Take a look at db.py:Stats, which provides some database statistics.
       # To use its functionality, you may need to implement parts of db.py
       cost = 0
+      for t in join:
+        cost += Stats(t).card
+
     else:
       # XXX: Compute the cost of the tuple-based nested loops join operation
       # in terms of the cost to compute the outer (left) subplan and the number
       # of tuples we need to examine from the inner (right) table.
       #
       # Hint: You may want to compute the cost recursively.
-    	
-    	self.cost = cost(self, join)
-    	if self.cost is None:
-    		continue
-    	cost = 0	
-    	for i, table in enumerate(join):
-    		outer_len = len(join[:i])
-    		inner_len = len(join[i+1:])
-    		cost = outer_len + outer_len * inner_len
-    		
-
-      # We penalize high cardinality joins a little bit
-      cost += 0.1 * self.card(join)
-
-    # save estimate in the cache
-    self.costs[join] = cost
+      # NOTE FROM DANIELLE: idk what's going on here...
+      self.cost = cost(self, join)
+      if self.cost == None:
+      	for i, table in enumerate(join):
+      		outer_len = len(join[:i])
+      		inner_len = len(join[i+1:])
+      		cost = outer_len + outer_len * inner_len
+          # We penalize high cardinality joins a little bit
+        cost += 0.1 * self.card(join)
+        # save estimate in the cache
+        self.costs[join] = cost
     return cost
 
   def card(self, join):
     """
-    @join join subplan 
+    @join join subplan
     @returns join cardinality estimate
 
     Compute the cardinality estimate of the join subplan
@@ -348,7 +346,7 @@ class SelingerOpt(object):
     Computes the selectivity of the join depending on the number of
     tables, the predicate, and the selectivities of the join attributes
     """
-    
+
     if join.is_type(Scan):
       return self.DEFAULT_SELECTIVITY
 
@@ -356,8 +354,8 @@ class SelingerOpt(object):
     # is 1 if True (cross-product), or 0 if False
     if join.cond.is_type(Bool):
       return join.cond() * 1.0
-    
-    
+
+
     if join.l.is_type(Scan):
       lsel = self.selectivity_attr(join.l, join.cond.l.attr if join.cond.l.tablename == join.l.alias else join.cond.r.attr)
     else:
@@ -367,7 +365,7 @@ class SelingerOpt(object):
       rsel = self.selectivity_attr(join.r,join.cond.l.attr if join.cond.l.tablename == join.r.alias else join.cond.r.attr)
     else:
       rsel = 1.0
- 
+
     return min(lsel, rsel)
 
   def selectivity_attr(self, source, attr):
@@ -375,13 +373,13 @@ class SelingerOpt(object):
     @source the left or right subplan
     @attr  the attribute in the subplan used in the equijoin
 
-    Estimate the selectivity of a join attribute.  
+    Estimate the selectivity of a join attribute.
     We make the following assumptions:
 
     * if the source is not a base table, then the selectivity is 1
     * if the attribute is numeric then we assume the attribute values are
       uniformly distributed between the min and max values.
-    * if the attribute is non-numeric, we assume the values are 
+    * if the attribute is non-numeric, we assume the values are
       uniformly distributed across the distinct attribute values
     """
     if not source.is_type(Scan):
