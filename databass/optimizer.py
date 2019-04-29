@@ -2,6 +2,7 @@ from ops import *
 from itertools import *
 from collections import *
 
+
 def pickone(l, attr):
   return [(i and getattr(i, attr) or None) for i in l]
 
@@ -287,14 +288,19 @@ class SelingerOpt(object):
     if join in self.costs:
       return self.costs[join]
 
+    # # Code to debug
+    # import pdb; pdb.set_trace()
+    # print(vars(join.l))
+    # table = self.db[join.l]
+    # stat = table.stats[join.cond.l.attr]
+    # print(table, stat)
+
     # the input is actually a Scan operator
     if join.is_type(Scan):
       # XXX: Implement the cost to scan this Scan operator
       # Take a look at db.py:Stats, which provides some database statistics.
       # To use its functionality, you may need to implement parts of db.py
-      cost = 0
-      for t in join:
-        cost += Stats(t).card
+      cost = Stats(join.l).card
 
     else:
       # XXX: Compute the cost of the tuple-based nested loops join operation
@@ -302,17 +308,15 @@ class SelingerOpt(object):
       # of tuples we need to examine from the inner (right) table.
       #
       # Hint: You may want to compute the cost recursively.
-      # NOTE FROM DANIELLE: idk what's going on here...
-      self.cost = cost(self, join)
-      if self.cost == None:
-      	for i, table in enumerate(join):
-      		outer_len = len(join[:i])
-      		inner_len = len(join[i+1:])
-      		cost = outer_len + outer_len * inner_len
-          # We penalize high cardinality joins a little bit
-        cost += 0.1 * self.card(join)
-        # save estimate in the cache
-        self.costs[join] = cost
+      if join.l.is_type(Scan):
+        cost = 0
+      cost = Stats(join.l).card + Stats(join.l).card * Stats(join.r).card
+
+      # We penalize high cardinality joins a little bit
+      cost += 0.1 * self.card(join)
+
+    # save estimate in the cache
+    self.costs[join] = cost
     return cost
 
   def card(self, join):
