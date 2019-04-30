@@ -126,10 +126,10 @@ class SelingerOpt(object):
 
     # This is an exhaustive algorithm that uses recursion
     # You will implement a faster bottom-up algorithm based on Selinger
-    plan = self.best_plan_exhaustive(sources)
+    # plan = self.best_plan_exhaustive(sources)
 
     # XXX: Uncomment the following once you have implemented best_plan()
-    # plan = self.best_plan(sources)
+    plan = self.best_plan(sources)
 
 
     # print "# plans tested: ", self.plans_tested
@@ -214,7 +214,11 @@ class SelingerOpt(object):
         # inner table, and compute its cost using self.cost()
         #
         # Keep the lowest cost candidate plan in best_cand
-        pass
+        current_plan = ThetaJoin(best_plan, r, pred)
+        current_cost = self.cost(current_plan)
+        if current_cost <= best_cost:
+          best_cost = current_cost
+          best_cand = current_plan
 
       best_plan = best_cand
       sources.remove(best_plan.r)
@@ -238,6 +242,12 @@ class SelingerOpt(object):
       pred = self.get_join_pred(l, r)
 
       # XXX: Write your code here
+      plan = ThetaJoin(l, r, pred)
+      cost = self.cost(plan)
+
+      if cost <= best_cost:
+        best_cost = cost
+        best_plan = plan
 
     return best_plan
 
@@ -288,19 +298,14 @@ class SelingerOpt(object):
     if join in self.costs:
       return self.costs[join]
 
-    # # Code to debug
-    # import pdb; pdb.set_trace()
-    # print(vars(join.l))
-    # table = self.db[join.l]
-    # stat = table.stats[join.cond.l.attr]
-    # print(table, stat)
 
     # the input is actually a Scan operator
     if join.is_type(Scan):
       # XXX: Implement the cost to scan this Scan operator
       # Take a look at db.py:Stats, which provides some database statistics.
       # To use its functionality, you may need to implement parts of db.py
-      cost = Stats(join.l).card
+      table = self.db[join.tablename]
+      cost = table.stats.card
 
     else:
       # XXX: Compute the cost of the tuple-based nested loops join operation
@@ -308,9 +313,7 @@ class SelingerOpt(object):
       # of tuples we need to examine from the inner (right) table.
       #
       # Hint: You may want to compute the cost recursively.
-      if join.l.is_type(Scan):
-        cost = 0
-      cost = Stats(join.l).card + Stats(join.l).card * Stats(join.r).card
+      cost = self.cost(join.l) + self.card(join.l) * self.card(join.r)
 
       # We penalize high cardinality joins a little bit
       cost += 0.1 * self.card(join)
@@ -333,11 +336,16 @@ class SelingerOpt(object):
     if join.is_type(Scan):
       # XXX: Compute the cardinality of the join if it is a Scan operator
       # Similar to self.cost() above, take a look at db.py:Stats.
-      card = 1
+      table = self.db[join.tablename]
+      card = table.stats.card
+
     else:
       # XXX: Compute the cardinality of the join subplan as described in lecture.
       # Hint: You may want to compute the cardinality recursively
-      card = 1
+      card_l = self.card(join.l)
+      card_r = self.card(join.r)
+
+      card = (card_l * card_r) * self.selectivity(join)
 
     # Save estimate in the cache
     self.cards[join] = card
@@ -394,10 +402,10 @@ class SelingerOpt(object):
     if table.type(attr) == "num":
       # XXX: Write code to estimate the selectivity of the numeric attribute.
       # You can add 1 to the denominator to avoid divide by 0 errors
-      sel = 1.0
+      sel = 1.0 / (stat['max'] - stat['min'] + 1.0)
     else:
       # XXX: Write code to estimaote the selectivity of the non-numeric attribute
-      sel = 1.0
+      sel = 1.0 / stat['ndistinct']
     return sel
 
 

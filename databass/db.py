@@ -18,31 +18,26 @@ class Stats(object):
   # XXX: Edit this to compute the table cardinality
   def __init__(self, table):
     self.table = table
-    self.card = len(table)
+    self.card = len(self.table.rows)
 
   # XXX: edit this to return the domain of the field
   def __getitem__(self, field):
-    if type(self, field) == "num":
-  		self.min = min(field)
-  		self.max = max(field)
-  		self.ndistinct = len(set(field))
-    elif type(self, field) == "str":
-      self.min = None
-      self.max = None
-      self.ndistinct = len(set(field))
+    if self.table.type(field) == "num":
+      num_list = self.table.col_values(field)
+      min_field = min(num_list)
+      max_field = max(num_list)
+      ndistinct_field = len(set(num_list))
 
-    # self.domain = {
-    #     					"min" == self.min,
-    #     					"max" == self.max,
-    #     					"ndistinct" == self.ndistinct
-    #     					}
-    self.domain = {
-                  "min": self.min,
-                  "max": self.max,
-                  "ndistinct": self.ndistinct
-                  }
-    return self.domain
+    elif self.table.type(field) == "str":
+      min_field = None
+      max_field = None
+      str_list = self.table.col_values(field)
+      ndistinct_field = len(set(str_list))
 
+    return {"min": min_field,
+            "max": max_field,
+            "ndistinct": ndistinct_field
+            }
 
 class Table(object):
   def __init__(self, fields):
